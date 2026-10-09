@@ -84,8 +84,16 @@ function render(){
  return html2canvas(c,{scale:2,backgroundColor:"#ffffff",useCORS:true,width:794,height:1123,windowWidth:794}).then(function(cv){c.remove();return cv},function(e){c.remove();throw e});
 }
 function blobOf(cv,type,q){return new Promise(function(res){cv.toBlob(res,type,q)})}
+function saveFile(fn,data){
+ if(dl)return dl.save({filename:fn,data:data});
+ var blob=data instanceof Blob?data:new Blob([data],{type:"application/pdf"});
+ var u=URL.createObjectURL(blob),a=document.createElement("a");
+ a.href=u;a.download=fn;document.body.appendChild(a);a.click();a.remove();
+ setTimeout(function(){URL.revokeObjectURL(u)},5000);
+ return Promise.resolve();
+}
 async function go(kind){
- if(!dl){st.textContent="Saving is not available in this view.";return}
+ 
  bp.disabled=bj.disabled=true;st.textContent="Preparing "+kind.toUpperCase()+"...";
  try{
   var cv=await render(),data,fn;
@@ -95,13 +103,13 @@ async function go(kind){
    pdf.addImage(cv.toDataURL("image/jpeg",0.95),"JPEG",0,0,210,297);
    data=pdf.output("arraybuffer");fn=name()+".pdf";
   }
-  await dl.save({filename:fn,data:data});
+  await saveFile(fn,data);
   st.textContent="Saved "+fn;
  }catch(e){st.textContent=(e&&e.code==="declined")?"Save cancelled.":"Could not save: "+((e&&e.message)||"error")}
  bp.disabled=bj.disabled=false;
 }
 bp.onclick=function(){go("pdf")};bj.onclick=function(){go("jpg")};
-(window.claude&&claude.use?claude.use("downloads"):Promise.resolve(null)).then(function(d){dl=d;if(!d){st.textContent="Direct saving unavailable here. Use your browser's Print and choose Save as PDF."}},function(){});
+(window.claude&&claude.use?claude.use("downloads"):Promise.resolve(null)).then(function(d){dl=d;},function(){});
 </script>
 </body>
 </html>
